@@ -215,6 +215,10 @@ struct FFilamentAsset : public FilamentAsset {
         return mScenes[sceneIndex].c_str();
     }
 
+     const std::vector<AnimationMarker>&getAnimationMarkers() const noexcept {
+        return animationMarkers;
+    }
+
     void addEntitiesToScene(Scene& targetScene, const Entity* entities, size_t count,
             SceneMask sceneFilter) const;
 
@@ -252,6 +256,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<MorphTargetBuffer*> mMorphTargetBuffers;
     utils::FixedCapacityVector<Skin> mSkins;
     utils::FixedCapacityVector<utils::CString> mScenes;
+    std::vector<AnimationMarker> animationMarkers;
     Aabb mBoundingBox;
     utils::Entity mRoot;
     std::vector<FFilamentInstance*> mInstances;

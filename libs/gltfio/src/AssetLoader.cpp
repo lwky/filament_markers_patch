@@ -387,7 +387,10 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
     return instance;
 }
 
-void FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
+void FAssetLoader::createRootAsset(const cgltf_data *srcAsset) {
+
+    printf("printf createRootAsset()" "\n");
+
     SYSTRACE_CALL();
     #if !GLTFIO_DRACO_SUPPORTED
     for (cgltf_size i = 0; i < srcAsset->extensions_required_count; i++) {
@@ -430,7 +433,97 @@ void FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
         for (size_t ni = 0, nic = scene.nodes_count; ni < nic; ++ni) {
             mRootNodes[scene.nodes[ni]].set(si);
         }
+
+        printf("scene.extensions_count:%d" "\n", (int)scene.extensions_count);
+        for (size_t i = 0; i < scene.extensions_count; ++i) {
+            cgltf_extension extension = scene.extensions[i];
+            printf("scene[%d].extension.name:%s" "\n", (int)i, extension.name);
+            if (std::string(extension.name) == "WEBGI_animation_markers" ) {
+                printf("extension.data.size:%d" "\n", (int)strlen(extension.data));
+                // printf("scene[%d].extension.data:\n%s \n", (int)i, extension.data);
+
+                jsmn_parser parser = {0,0,0};
+                jsmn_init(&parser);
+                printf("parser %d %d %d" "\n", parser.pos, parser.toknext, parser.toksuper);
+
+                
+                int token_count = jsmn_parse(&parser, (const char*)extension.data, strlen(extension.data), NULL, 0);
+                printf("token_count:%d" "\n", token_count);
+
+                if (token_count < 2) {
+                  break;
+                }
+
+                // jsmntok_t* tokens = (jsmntok_t*)options->memory.alloc_func(options->memory.user_data, sizeof(jsmntok_t) * (options->json_token_count + 1));
+
+                std::vector<jsmntok_t> tokens = std::vector<jsmntok_t>(token_count + 1);
+                jsmn_init(&parser);
+                int token_count2 = jsmn_parse(&parser, (const char*)extension.data, strlen(extension.data), &tokens[0], token_count);
+                printf("token_count2:%d" "\n", token_count2);
+
+                tokens[token_count].type = JSMN_UNDEFINED;
+                
+                std::string markersLabel(extension.data + tokens[1].start, extension.data + tokens[1].end);
+                printf("markers: %s" "\n", markersLabel.c_str());
+                if (markersLabel != "markers") {
+                  break;
+                }
+                int numMarkers = tokens[2].size;
+                printf("numMarkers: %d" "\n", numMarkers);
+
+                // for (int i = 0; i < token_count; ++i) {
+                //     auto t = tokens[i];
+                //     printf("token[%d] %d %d %d %d" "\n", i, (int)t.type,
+                //     t.start, t.end, t.size);
+                // }
+
+                mAsset->animationMarkers.resize(numMarkers);
+                
+                for (int i = 0; i < numMarkers; ++i) {
+                    auto t_name     = tokens[ 3 + i*7 + 1];
+                    auto t_nameval  = tokens[ 3 + i*7 + 2];
+                    auto t_frame    = tokens[ 3 + i*7 + 3];
+                    auto t_frameval = tokens[ 3 + i*7 + 4];
+                    auto t_time     = tokens[ 3 + i*7 + 5];
+                    auto t_timeval  = tokens[ 3 + i*7 + 6];
+
+                    auto t_name_s = std::string(extension.data + t_name.start, extension.data + t_name.end);
+                    auto t_frame_s = std::string(extension.data + t_frame.start, extension.data + t_frame.end);
+                    auto t_time_s = std::string(extension.data + t_time.start, extension.data + t_time.end);
+
+                    if (t_name_s != "name" || t_frame_s != "frame" || t_time_s != "time") {
+                        printf("labels invalid %d %s %s %s" "\n", i, t_name_s.c_str(),t_frame_s.c_str(),t_time_s.c_str());
+                        break;
+                    }
+
+                    auto t_name_vs  = std::string(extension.data + t_nameval.start, extension.data + t_nameval.end);
+                    auto t_frame_vs = std::string(extension.data + t_frameval.start, extension.data + t_frameval.end);
+                    auto t_time_vs  = std::string(extension.data + t_timeval.start, extension.data + t_timeval.end);
+
+                    auto name = t_name_vs;
+                    auto frame = atoi(t_frame_vs.c_str());
+                    auto time = atof(t_time_vs.c_str());
+
+                    printf("label %d %s %d %f" "\n", i,name.c_str(), frame, time);
+
+                    mAsset->animationMarkers[i].name = name;
+                    mAsset->animationMarkers[i].frame = frame;
+                    mAsset->animationMarkers[i].time = time;
+                }
+
+                std::sort(
+                    mAsset->animationMarkers.begin(),
+                    mAsset->animationMarkers.end(),
+                    [](const FilamentAsset::AnimationMarker& lhs,
+                        const FilamentAsset::AnimationMarker& rhs) {
+                        return lhs.time < rhs.time;
+                    });
+            }
+        }
+
+        
     }
+
 
     // Some exporters (e.g. Cinema4D) produce assets with a separate animation hierarchy and
     // modeling hierarchy, where nodes in the former have no associated scene. We need to create
@@ -1277,6 +1370,9 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_data* srcAsset,
         case cgltf_alpha_mode_max_enum:
             break;
     }
+        
+    //TEMPLUUK
+    matkey.alphaMode = AlphaMode::BLEND;
 
     return matkey;
 }
