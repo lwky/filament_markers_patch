@@ -261,7 +261,7 @@ size_t Animator::getAnimationCount() const {
 
 void Animator::applyAnimation(size_t animationIndex, float time) const {
     const Animation& anim = mImpl->animations[animationIndex];
-    time = fmod(time, anim.duration+0.001);
+    time = fmod(time, anim.duration);
     TransformManager& transformManager = *mImpl->transformManager;
     transformManager.openLocalTransformTransaction();
     int c = 0;
