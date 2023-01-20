@@ -389,7 +389,7 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
 
 void FAssetLoader::createRootAsset(const cgltf_data *srcAsset) {
 
-    printf("printf createRootAsset()" "\n");
+    printf("createRootAsset()" "\n");
 
     SYSTRACE_CALL();
     #if !GLTFIO_DRACO_SUPPORTED
