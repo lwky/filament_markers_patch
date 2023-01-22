@@ -504,7 +504,7 @@ void FAssetLoader::createRootAsset(const cgltf_data *srcAsset) {
                     auto frame = atoi(t_frame_vs.c_str());
                     auto time = atof(t_time_vs.c_str());
 
-                    printf("label %d %s %d %f" "\n", i,name.c_str(), frame, time);
+                    // printf("label %d %s %d %f" "\n", i,name.c_str(), frame, time);
 
                     mAsset->animationMarkers[i].name = name;
                     mAsset->animationMarkers[i].frame = frame;
@@ -519,11 +519,8 @@ void FAssetLoader::createRootAsset(const cgltf_data *srcAsset) {
                         return lhs.time < rhs.time;
                     });
             }
-        }
-
-        
+        }   
     }
-
 
     // Some exporters (e.g. Cinema4D) produce assets with a separate animation hierarchy and
     // modeling hierarchy, where nodes in the former have no associated scene. We need to create
