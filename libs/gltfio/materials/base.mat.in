@@ -5,6 +5,7 @@ material {
     blending : ${BLENDING},
     doubleSided : ${DOUBLESIDED},
     transparency : ${TRANSPARENCY},
+    transparentShadow : ${TRANSPARENTSHADOW}, // LUUK
     flipUV : false,
     specularAmbientOcclusion : simple,
     specularAntiAliasing : true,
