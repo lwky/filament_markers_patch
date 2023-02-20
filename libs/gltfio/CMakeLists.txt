@@ -74,7 +74,8 @@ function(build_ubershader NAME SRC SHADINGMODEL BLENDING)
         -TDOUBLESIDED=false
         -TTRANSPARENCY=default
         -TSHADINGMODEL=${SHADINGMODEL}
-        -TBLENDING=${BLENDING})
+        -TBLENDING=${BLENDING}
+        -TTRANSPARENTSHADOW=true)
 
     add_custom_command(
         OUTPUT "${NAME}.filamat"
