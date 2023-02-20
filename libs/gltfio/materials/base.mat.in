@@ -70,19 +70,34 @@ material {
 
         ${CUSTOM_PARAMS}
     ],
+
+    // Custom vertex shader outputs
+    variables : [
+        uvOffset
+    ],
 }
 
 vertex {
   void materialVertex(inout MaterialVertexInputs material) {
-      ${CUSTOM_VERTEX}
+        ${CUSTOM_VERTEX}
+
+        float4x4 mat = getWorldFromModelMatrix();
+        highp float scale0 = sqrt(
+                mat[0].x * mat[0].x
+              + mat[0].y * mat[0].y
+              + mat[0].z * mat[0].z);
+        scale0 = mod((scale0 - 1.0) * 12345.67, 1.0);
+        material.uvOffset.x = scale0;
     }
 }
 
 fragment {
     void material(inout MaterialInputs material) {
         highp float2 uvs[2];
-        uvs[0] = getUV0();
-        uvs[1] = getUV1();
+        // uvs[0] = getUV0();
+        // uvs[1] = getUV1();
+        uvs[0] = getUV0() + variable_uvOffset.x;
+        uvs[1] = getUV1() + variable_uvOffset.x;
 
         #if !defined(SHADING_MODEL_UNLIT)
             if (materialParams.normalIndex > -1) {
