@@ -153,7 +153,7 @@ public:
 
     MaterialInstanceCache(const cgltf_data* hierarchy) :
         mHierarchy(hierarchy),
-        mMaterialInstances(hierarchy->materials_count, Entry{}),
+        mMaterialInstances(hierarchy->materials_count*2, Entry{}),
         mMaterialInstancesWithVertexColor(hierarchy->materials_count, Entry{}) {}
 
     void flush(utils::FixedCapacityVector<MaterialInstance*>* dest) {
@@ -194,12 +194,16 @@ public:
         }
     }
 
-    Entry* getEntry(const cgltf_material** mat, bool vertexColor) {
+    Entry* getEntry(const cgltf_material** mat, bool vertexColor, bool secondGroup) {
         if (*mat) {
             EntryVector& entries = vertexColor ?
                     mMaterialInstancesWithVertexColor : mMaterialInstances;
-            const cgltf_material* basePointer = mHierarchy->materials;
-            return &entries[*mat - basePointer];
+            const cgltf_material *basePointer = mHierarchy->materials;
+            auto index = *mat - basePointer;
+            if (secondGroup) {
+                index += entries.size() /2;
+            }
+            return &entries[index];
         }
         *mat = &kDefaultMat;
         return vertexColor ? &mDefaultMaterialInstanceWithVertexColor : &mDefaultMaterialInstance;
@@ -282,6 +286,8 @@ private:
             bool vertexColor);
     MaterialInstance* createMaterialInstance(const cgltf_data* srcAsset,
             const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor);
+    MaterialInstance* createMaterialInstance2(const cgltf_data* srcAsset,
+            const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor, std::string name, bool fade);
     MaterialKey getMaterialKey(const cgltf_data* srcAsset,
             const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor,
             cgltf_texture_view* baseColorTexture,
@@ -1369,7 +1375,7 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_data* srcAsset,
     }
         
     //TEMPLUUK
-    matkey.alphaMode = AlphaMode::BLEND;
+    // matkey.alphaMode = AlphaMode::BLEND;
 
     return matkey;
 }
@@ -1391,16 +1397,36 @@ Material* FAssetLoader::getMaterial(const cgltf_data* srcAsset,
 MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsset,
         const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor) {
     MaterialInstanceCache::Entry* const cacheEntry =
-            mMaterialInstanceCache.getEntry(&inputMat, vertexColor);
+            mMaterialInstanceCache.getEntry(&inputMat, vertexColor, false);
     if (cacheEntry->instance) {
         *uvmap = cacheEntry->uvmap;
         return cacheEntry->instance;
     }
 
+    std::string name = inputMat->name;
+    std::string name2 = std::string(inputMat->name) + "_blend";
+
+    auto m2 = createMaterialInstance2( srcAsset, inputMat, uvmap, vertexColor, name2, true);
+    auto m1 = createMaterialInstance2( srcAsset, inputMat, uvmap, vertexColor, name, false);
+    
+    return m1;
+}
+
+MaterialInstance *FAssetLoader::createMaterialInstance2(
+    const cgltf_data *srcAsset, const cgltf_material *inputMat, UvMap *uvmap,
+    bool vertexColor, std::string name, bool blend) {
+
+  MaterialInstanceCache::Entry* const cacheEntry =
+            mMaterialInstanceCache.getEntry(&inputMat, vertexColor, blend);
+
     cgltf_texture_view baseColorTexture;
     cgltf_texture_view metallicRoughnessTexture;
     MaterialKey matkey = getMaterialKey(srcAsset, inputMat, uvmap, vertexColor, &baseColorTexture,
             &metallicRoughnessTexture);
+
+    if (blend) { 
+        matkey.alphaMode = AlphaMode::BLEND;
+    }
 
     // Check if this material has an extras string.
     CString extras;
@@ -1411,7 +1437,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
 
     // This not only creates a material instance, it modifies the material key according to our
     // rendering constraints. For example, Filament only supports 2 sets of texture coordinates.
-    MaterialInstance* mi = mMaterials.createMaterialInstance(&matkey, uvmap, inputMat->name,
+    MaterialInstance* mi = mMaterials.createMaterialInstance(&matkey, uvmap, name.c_str(),
             extras.c_str());
     if (!mi) {
         slog.e << "No material with the specified requirements exists." << io::endl;
