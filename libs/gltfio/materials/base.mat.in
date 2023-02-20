@@ -22,6 +22,9 @@ material {
         { type : sampler2d, name : baseColorMap },
         { type : mat3, name : baseColorUvMatrix, precision: high },
 
+        { type : float, name : alpha },
+        { type : float4, name : baseColorBlend },
+
         // Metallic-Roughness Map
         { type : int, name : metallicRoughnessIndex },
         { type : float, name : metallicFactor },
@@ -108,8 +111,12 @@ fragment {
         }
 
         #if defined(BLEND_MODE_TRANSPARENT)
+            material.baseColor.a *= materialParams.alpha;
             material.baseColor.rgb *= material.baseColor.a;
         #endif
+
+        material.baseColor.rgb = material.baseColor.rgb * (1.0 - materialParams.baseColorBlend.a)
+                                 + materialParams.baseColorBlend.rgb * material.baseColor.a * materialParams.baseColorBlend.a;
 
         material.baseColor *= getColor();
 

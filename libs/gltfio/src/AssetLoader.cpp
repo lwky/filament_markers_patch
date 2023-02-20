@@ -1477,6 +1477,9 @@ MaterialInstance *FAssetLoader::createMaterialInstance2(
         mi->setParameter("glossinessFactor", sgConfig.glossiness_factor);
     }
 
+    mi->setParameter("alpha", 1.f);
+    mi->setParameter("baseColorBlend", float4{0.f,0.f,0.f,0.f});
+
     const TextureProvider::TextureFlags sRGB = TextureProvider::TextureFlags::sRGB;
     const TextureProvider::TextureFlags LINEAR = TextureProvider::TextureFlags::NONE;
 
