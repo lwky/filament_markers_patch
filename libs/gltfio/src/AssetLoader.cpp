@@ -1394,8 +1394,12 @@ Material* FAssetLoader::getMaterial(const cgltf_data* srcAsset,
     return material;
 }
 
-MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsset,
-        const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor) {
+MaterialInstance *
+FAssetLoader::createMaterialInstance(const cgltf_data *srcAsset,
+                                     const cgltf_material *inputMat,
+                                     UvMap *uvmap, bool vertexColor) {
+//   printf("createMaterialInstance() %s vertexColor:%d\n", inputMat->name, (int)vertexColor);
+
     MaterialInstanceCache::Entry* const cacheEntry =
             mMaterialInstanceCache.getEntry(&inputMat, vertexColor, false);
     if (cacheEntry->instance) {
@@ -1403,8 +1407,10 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         return cacheEntry->instance;
     }
 
-    std::string name = inputMat->name;
-    std::string name2 = std::string(inputMat->name) + "_blend";
+    std::string name = inputMat->name?inputMat->name:"";
+    std::string name2 = name + "_blend";
+
+    // printf("createMaterialInstance() %s %s\n", name.c_str(), name2.c_str());
 
     auto m2 = createMaterialInstance2( srcAsset, inputMat, uvmap, vertexColor, name2, true);
     auto m1 = createMaterialInstance2( srcAsset, inputMat, uvmap, vertexColor, name, false);
