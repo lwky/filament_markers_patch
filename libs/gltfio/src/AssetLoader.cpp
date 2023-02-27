@@ -756,12 +756,16 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     const cgltf_mesh* mesh = node->mesh;
     const cgltf_size primitiveCount = mesh->primitives_count;
 
+    // printf("createRenderable() name:'%s' primitiveCount:%d\n", name, (int)primitiveCount);
+
     // If the mesh is already loaded, obtain the list of Filament VertexBuffer / IndexBuffer objects
     // that were already generated (one for each primitive).
     FixedCapacityVector<Primitive>& prims = mAsset->mMeshCache[mesh - srcAsset->meshes];
     assert_invariant(prims.size() == primitiveCount);
     Primitive* outputPrim = prims.data();
     const cgltf_primitive* inputPrim = &mesh->primitives[0];
+
+    // printf("createRenderable() inputPrim->material:%llu\n", inputPrim->material);
 
     Aabb aabb;
 
@@ -791,9 +795,10 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
         bool hasVertexColor = primitiveHasVertexColor(*inputPrim);
         MaterialInstance* mi = createMaterialInstance(srcAsset, inputPrim->material, &uvmap,
                 hasVertexColor);
-        assert_invariant(mi);
+        // assert_invariant(mi);
         if (!mi) {
-            mError = true;
+            // dont crash on null material
+            // mError = true;
             continue;
         }
 
@@ -1398,6 +1403,10 @@ MaterialInstance *
 FAssetLoader::createMaterialInstance(const cgltf_data *srcAsset,
                                      const cgltf_material *inputMat,
                                      UvMap *uvmap, bool vertexColor) {
+  if (inputMat == nullptr) {
+    printf("createMaterialInstance() no name! %llu vertexColor:%d\n", inputMat, (int)vertexColor);
+    return nullptr;
+  }
 //   printf("createMaterialInstance() %s vertexColor:%d\n", inputMat->name, (int)vertexColor);
 
     MaterialInstanceCache::Entry* const cacheEntry =
@@ -1421,6 +1430,8 @@ FAssetLoader::createMaterialInstance(const cgltf_data *srcAsset,
 MaterialInstance *FAssetLoader::createMaterialInstance2(
     const cgltf_data *srcAsset, const cgltf_material *inputMat, UvMap *uvmap,
     bool vertexColor, std::string name, bool blend) {
+
+//   printf("createMaterialInstance2() %s vertexColor:%d blend:%d\n", name.c_str(), (int)vertexColor, (int)blend);
 
   MaterialInstanceCache::Entry* const cacheEntry =
             mMaterialInstanceCache.getEntry(&inputMat, vertexColor, blend);
