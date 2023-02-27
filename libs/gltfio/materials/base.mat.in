@@ -98,6 +98,10 @@ fragment {
         // uvs[1] = getUV1();
         uvs[0] = getUV0() + variable_uvOffset.x;
         uvs[1] = getUV1() + variable_uvOffset.x;
+        if(variable_uvOffset.x > 0.0){
+            uvs[0] *= 2.0;
+            uvs[1] *= 2.0;
+        }
 
         #if !defined(SHADING_MODEL_UNLIT)
             if (materialParams.normalIndex > -1) {
