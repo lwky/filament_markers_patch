@@ -86,7 +86,7 @@ vertex {
                 mat[0].x * mat[0].x
               + mat[0].y * mat[0].y
               + mat[0].z * mat[0].z);
-        scale0 = mod(max(0.0,scale0 - 1.0) * 12345.67, 1.0);
+        scale0 = mod(max(0.0,scale0 - 1.0001) * 12345.67, 1.0);
         material.uvOffset.x = scale0;
     }
 }
