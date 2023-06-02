@@ -1404,7 +1404,7 @@ FAssetLoader::createMaterialInstance(const cgltf_data *srcAsset,
                                      const cgltf_material *inputMat,
                                      UvMap *uvmap, bool vertexColor) {
   if (inputMat == nullptr) {
-    printf("createMaterialInstance() no name! %llu vertexColor:%d\n", inputMat, (int)vertexColor);
+    printf("createMaterialInstance() inputMat == nullptr! vertexColor:%d\n", (int)vertexColor);
     return nullptr;
   }
 //   printf("createMaterialInstance() %s vertexColor:%d\n", inputMat->name, (int)vertexColor);
@@ -1416,7 +1416,7 @@ FAssetLoader::createMaterialInstance(const cgltf_data *srcAsset,
         return cacheEntry->instance;
     }
 
-    std::string name = inputMat->name?inputMat->name:"";
+    std::string name = inputMat->name?inputMat->name:"UNNAMED_MATERIAL";
     std::string name2 = name + "_blend";
 
     // printf("createMaterialInstance() %s %s\n", name.c_str(), name2.c_str());
