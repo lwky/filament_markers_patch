@@ -86,8 +86,10 @@ vertex {
                 mat[0].x * mat[0].x
               + mat[0].y * mat[0].y
               + mat[0].z * mat[0].z);
-        scale0 = mod( round(max(0.0,scale0 - 1.0001) * 10000.0) * 1.234567, 1.0);
-        material.uvOffset.x = scale0;
+        highp float offset1 = mod(round(max(0.0, scale0 - 1.0001) * 10000.0) * 1.0, 18.0) * 0.05555;
+        highp float offset2 = mod(round(max(0.0, scale0 - 1.0001) * 10000.0) * 7.0, 18.0) * 0.05555;
+        material.uvOffset.x = offset1;
+        material.uvOffset.y = offset2;
     }
 }
 
@@ -96,12 +98,12 @@ fragment {
         highp float2 uvs[2];
         // uvs[0] = getUV0();
         // uvs[1] = getUV1();
-        uvs[0] = getUV0() + variable_uvOffset.x;
-        uvs[1] = getUV1() + variable_uvOffset.x;
-        if(variable_uvOffset.x > 0.0){
-            uvs[0] *= 2.0;
-            uvs[1] *= 2.0;
-        }
+        uvs[0] = getUV0() + float2(variable_uvOffset.x, variable_uvOffset.y);
+        uvs[1] = getUV1() + float2(variable_uvOffset.x, variable_uvOffset.y);
+        // if(variable_uvOffset.x > 0.0){
+            // uvs[0] *= 2.0;
+            // uvs[1] *= 2.0;
+        // }
 
         #if !defined(SHADING_MODEL_UNLIT)
             if (materialParams.normalIndex > -1) {
