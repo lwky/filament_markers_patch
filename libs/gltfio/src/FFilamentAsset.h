@@ -215,8 +215,11 @@ struct FFilamentAsset : public FilamentAsset {
         return mScenes[sceneIndex].c_str();
     }
 
-     const std::vector<AnimationMarker>&getAnimationMarkers() const noexcept {
+    const std::vector<AnimationMarker>&getAnimationMarkers() const noexcept {
         return animationMarkers;
+    }
+    const std::vector<GLTFTexture>&getTextures() const noexcept {
+        return textures;
     }
 
     void addEntitiesToScene(Scene& targetScene, const Entity* entities, size_t count,
@@ -257,6 +260,7 @@ struct FFilamentAsset : public FilamentAsset {
     utils::FixedCapacityVector<Skin> mSkins;
     utils::FixedCapacityVector<utils::CString> mScenes;
     std::vector<AnimationMarker> animationMarkers;
+    std::vector<GLTFTexture> textures;
     Aabb mBoundingBox;
     utils::Entity mRoot;
     std::vector<FFilamentInstance*> mInstances;

@@ -545,17 +545,39 @@ void FAssetLoader::createRootAsset(const cgltf_data *srcAsset) {
     // Find every unique resource URI and store a pointer to any of the cgltf-owned cstrings
     // that match the URI. These strings get freed during releaseSourceData().
     tsl::robin_set<std::string_view> resourceUris;
-    auto addResourceUri = [&resourceUris](const char* uri) {
-        if (uri) {
+    auto addResourceUri = [&resourceUris](const char *uri) {
+      if (uri) {
+            // printf("uri %s\n", uri);
             resourceUris.insert(uri);
         }
     };
     for (cgltf_size i = 0, len = srcAsset->buffers_count; i < len; ++i) {
+        // printf("srcAsset->buffers[%d/%d].uri %s\n", i, len, srcAsset->buffers[i].uri);
         addResourceUri(srcAsset->buffers[i].uri);
     }
     for (cgltf_size i = 0, len = srcAsset->images_count; i < len; ++i) {
+        const cgltf_image &image = srcAsset->images[i];
+        cgltf_buffer_view *buffer_view = image.buffer_view;
+
+        #ifndef NDEBUG
+        printf("srcAsset->images[%d/%d] name%s size:%d offset:%d data:%p buffer.data:%p\n", i, len, image.name,
+               buffer_view->size, buffer_view->offset, buffer_view->data, buffer_view->data);
+
+        printf("srcAsset->file_data:%p\n", srcAsset->file_data);
+        printf("srcAsset->bin:%p\n", srcAsset->bin);
+        printf("srcAsset->json:%p\n", srcAsset->json);
+        #endif
+
+        FilamentAsset::GLTFTexture texture;
+        texture.name = image.name == nullptr ? "" : image.name;
+        texture.buffer_len = buffer_view->size;
+        texture.buffer = (unsigned char*)srcAsset->bin + buffer_view->offset;
+        mAsset->textures.push_back(texture);
+        
         addResourceUri(srcAsset->images[i].uri);
     }
+    printf("mAsset->textures.size():%d\n", mAsset->textures.size());
+
     mAsset->mResourceUris.reserve(resourceUris.size());
     for (std::string_view uri : resourceUris) {
         mAsset->mResourceUris.push_back(uri.data());
