@@ -576,7 +576,7 @@ void FAssetLoader::createRootAsset(const cgltf_data *srcAsset) {
         
         addResourceUri(srcAsset->images[i].uri);
     }
-    printf("mAsset->textures.size():%d\n", mAsset->textures.size());
+    printf("mAsset->textures.size():%lu\n", mAsset->textures.size());
 
     mAsset->mResourceUris.reserve(resourceUris.size());
     for (std::string_view uri : resourceUris) {
