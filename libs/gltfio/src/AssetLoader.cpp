@@ -559,8 +559,8 @@ void FAssetLoader::createRootAsset(const cgltf_data *srcAsset) {
         const cgltf_image &image = srcAsset->images[i];
         cgltf_buffer_view *buffer_view = image.buffer_view;
 
-        #ifndef NDEBUG
-        printf("srcAsset->images[%d/%d] name%s size:%d offset:%d data:%p buffer.data:%p\n", i, len, image.name,
+        #if !defined(NDEBUG) && 0
+        printf("srcAsset->images[%d/%d] name:'%s' size:%d offset:%d data:%p buffer.data:%p\n", i, len, image.name,
                buffer_view->size, buffer_view->offset, buffer_view->data, buffer_view->data);
 
         printf("srcAsset->file_data:%p\n", srcAsset->file_data);
