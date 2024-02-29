@@ -74,6 +74,7 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
     // For proggy, switch to NEAREST for pixel-perfect text.
     if (!fontPath.isFile() && !imGuiContext) {
         mSampler = TextureSampler(MinFilter::NEAREST, MagFilter::NEAREST);
+        // mSampler = TextureSampler(MinFilter::LINEAR, MagFilter::LINEAR);
         mMaterial->setDefaultParameter("albedo", mTexture, mSampler);
     }
 

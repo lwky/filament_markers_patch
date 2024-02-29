@@ -286,6 +286,21 @@ public:
     FilamentInstance** getAssetInstances() noexcept;
     size_t getAssetInstanceCount() const noexcept;
 
+
+    struct AnimationMarker {
+      std::string name;  
+      int frame;  
+      float time;
+    };
+    const std::vector<FilamentAsset::AnimationMarker>& getAnimationMarkers() const noexcept;
+
+    struct GLTFTexture {
+      std::string name;
+      int buffer_len;  
+      unsigned char* buffer;
+    };
+    const std::vector<FilamentAsset::GLTFTexture>& getTextures() const noexcept;
+
 protected:
     FilamentAsset() noexcept = default;
     ~FilamentAsset() = default;

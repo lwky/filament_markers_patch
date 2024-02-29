@@ -155,7 +155,7 @@ public:
 
     MaterialInstanceCache(const cgltf_data* hierarchy) :
         mHierarchy(hierarchy),
-        mMaterialInstances(hierarchy->materials_count, Entry{}),
+        mMaterialInstances(hierarchy->materials_count*2, Entry{}),
         mMaterialInstancesWithVertexColor(hierarchy->materials_count, Entry{}) {}
 
     void flush(utils::FixedCapacityVector<MaterialInstance*>* dest) {
@@ -196,12 +196,16 @@ public:
         }
     }
 
-    Entry* getEntry(const cgltf_material** mat, bool vertexColor) {
+    Entry* getEntry(const cgltf_material** mat, bool vertexColor, bool secondGroup) {
         if (*mat) {
             EntryVector& entries = vertexColor ?
                     mMaterialInstancesWithVertexColor : mMaterialInstances;
-            const cgltf_material* basePointer = mHierarchy->materials;
-            return &entries[*mat - basePointer];
+            const cgltf_material *basePointer = mHierarchy->materials;
+            auto index = *mat - basePointer;
+            if (secondGroup) {
+                index += entries.size() /2;
+            }
+            return &entries[index];
         }
         *mat = &kDefaultMat;
         return vertexColor ? &mDefaultMaterialInstanceWithVertexColor : &mDefaultMaterialInstance;
@@ -284,6 +288,9 @@ private:
             bool vertexColor);
     MaterialInstance* createMaterialInstance(const cgltf_material* inputMat, UvMap* uvmap,
             bool vertexColor, FFilamentAsset* fAsset);
+    MaterialInstance* createMaterialInstance2(const cgltf_data* srcAsset, const cgltf_material* inputMat, UvMap* uvmap,
+            bool vertexColor, FFilamentAsset* fAsset, std::string name, bool fade);
+    
     MaterialKey getMaterialKey(const cgltf_data* srcAsset,
             const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor,
             cgltf_texture_view* baseColorTexture,
@@ -424,7 +431,10 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* fAsset) {
     return instance;
 }
 
-FFilamentAsset* FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
+FFilamentAsset *FAssetLoader::createRootAsset(const cgltf_data *srcAsset) {
+
+    printf("createRootAsset()" "\n");
+    
     SYSTRACE_CALL();
     #if !GLTFIO_DRACO_SUPPORTED
     for (cgltf_size i = 0; i < srcAsset->extensions_required_count; i++) {
@@ -467,6 +477,93 @@ FFilamentAsset* FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
         for (size_t ni = 0, nic = scene.nodes_count; ni < nic; ++ni) {
             fAsset->mRootNodes[scene.nodes[ni]].set(si);
         }
+
+        printf("scene.extensions_count:%d" "\n", (int)scene.extensions_count);
+        for (size_t i = 0; i < scene.extensions_count; ++i) {
+            cgltf_extension extension = scene.extensions[i];
+            printf("scene[%d].extension.name:%s" "\n", (int)i, extension.name);
+            if (std::string(extension.name) == "WEBGI_animation_markers" ) {
+                printf("extension.data.size:%d" "\n", (int)strlen(extension.data));
+                // printf("scene[%d].extension.data:\n%s \n", (int)i, extension.data);
+
+                jsmn_parser parser = {0,0,0};
+                jsmn_init(&parser);
+                printf("parser %d %d %d" "\n", parser.pos, parser.toknext, parser.toksuper);
+
+                
+                int token_count = jsmn_parse(&parser, (const char*)extension.data, strlen(extension.data), NULL, 0);
+                printf("token_count:%d" "\n", token_count);
+
+                if (token_count < 2) {
+                  break;
+                }
+
+                // jsmntok_t* tokens = (jsmntok_t*)options->memory.alloc_func(options->memory.user_data, sizeof(jsmntok_t) * (options->json_token_count + 1));
+
+                std::vector<jsmntok_t> tokens = std::vector<jsmntok_t>(token_count + 1);
+                jsmn_init(&parser);
+                int token_count2 = jsmn_parse(&parser, (const char*)extension.data, strlen(extension.data), &tokens[0], token_count);
+                printf("token_count2:%d" "\n", token_count2);
+
+                tokens[token_count].type = JSMN_UNDEFINED;
+                
+                std::string markersLabel(extension.data + tokens[1].start, extension.data + tokens[1].end);
+                printf("markers: %s" "\n", markersLabel.c_str());
+                if (markersLabel != "markers") {
+                  break;
+                }
+                int numMarkers = tokens[2].size;
+                printf("numMarkers: %d" "\n", numMarkers);
+
+                // for (int i = 0; i < token_count; ++i) {
+                //     auto t = tokens[i];
+                //     printf("token[%d] %d %d %d %d" "\n", i, (int)t.type,
+                //     t.start, t.end, t.size);
+                // }
+
+                fAsset->animationMarkers.resize(numMarkers);
+                
+                for (int i = 0; i < numMarkers; ++i) {
+                    auto t_name     = tokens[ 3 + i*7 + 1];
+                    auto t_nameval  = tokens[ 3 + i*7 + 2];
+                    auto t_frame    = tokens[ 3 + i*7 + 3];
+                    auto t_frameval = tokens[ 3 + i*7 + 4];
+                    auto t_time     = tokens[ 3 + i*7 + 5];
+                    auto t_timeval  = tokens[ 3 + i*7 + 6];
+
+                    auto t_name_s = std::string(extension.data + t_name.start, extension.data + t_name.end);
+                    auto t_frame_s = std::string(extension.data + t_frame.start, extension.data + t_frame.end);
+                    auto t_time_s = std::string(extension.data + t_time.start, extension.data + t_time.end);
+
+                    if (t_name_s != "name" || t_frame_s != "frame" || t_time_s != "time") {
+                        printf("labels invalid %d %s %s %s" "\n", i, t_name_s.c_str(),t_frame_s.c_str(),t_time_s.c_str());
+                        break;
+                    }
+
+                    auto t_name_vs  = std::string(extension.data + t_nameval.start, extension.data + t_nameval.end);
+                    auto t_frame_vs = std::string(extension.data + t_frameval.start, extension.data + t_frameval.end);
+                    auto t_time_vs  = std::string(extension.data + t_timeval.start, extension.data + t_timeval.end);
+
+                    auto name = t_name_vs;
+                    auto frame = atoi(t_frame_vs.c_str());
+                    auto time = atof(t_time_vs.c_str());
+
+                    // printf("label %d %s %d %f" "\n", i,name.c_str(), frame, time);
+
+                    fAsset->animationMarkers[i].name = name;
+                    fAsset->animationMarkers[i].frame = frame;
+                    fAsset->animationMarkers[i].time = time;
+                }
+
+                std::sort(
+                    fAsset->animationMarkers.begin(),
+                    fAsset->animationMarkers.end(),
+                    [](const FilamentAsset::AnimationMarker& lhs,
+                        const FilamentAsset::AnimationMarker& rhs) {
+                        return lhs.time < rhs.time;
+                    });
+            }
+        }   
     }
 
     // Some exporters (e.g. Cinema4D) produce assets with a separate animation hierarchy and
@@ -477,6 +574,7 @@ FFilamentAsset* FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
         if (node->parent == nullptr && fAsset->mRootNodes.find(node) == fAsset->mRootNodes.end()) {
             fAsset->mRootNodes.insert({node, {}});
         }
+        
     }
 
     for (const auto& [node, sceneMask] : fAsset->mRootNodes) {
@@ -486,17 +584,39 @@ FFilamentAsset* FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
     // Find every unique resource URI and store a pointer to any of the cgltf-owned cstrings
     // that match the URI. These strings get freed during releaseSourceData().
     tsl::robin_set<std::string_view> resourceUris;
-    auto addResourceUri = [&resourceUris](const char* uri) {
-        if (uri) {
+    auto addResourceUri = [&resourceUris](const char *uri) {
+      if (uri) {
+            // printf("uri %s\n", uri);
             resourceUris.insert(uri);
         }
     };
     for (cgltf_size i = 0, len = srcAsset->buffers_count; i < len; ++i) {
+        // printf("srcAsset->buffers[%d/%d].uri %s\n", i, len, srcAsset->buffers[i].uri);
         addResourceUri(srcAsset->buffers[i].uri);
     }
     for (cgltf_size i = 0, len = srcAsset->images_count; i < len; ++i) {
+        const cgltf_image &image = srcAsset->images[i];
+        cgltf_buffer_view *buffer_view = image.buffer_view;
+
+        #if !defined(NDEBUG) && 0
+        printf("srcAsset->images[%d/%d] name:'%s' size:%d offset:%d data:%p buffer.data:%p\n", i, len, image.name,
+               buffer_view->size, buffer_view->offset, buffer_view->data, buffer_view->data);
+
+        printf("srcAsset->file_data:%p\n", srcAsset->file_data);
+        printf("srcAsset->bin:%p\n", srcAsset->bin);
+        printf("srcAsset->json:%p\n", srcAsset->json);
+        #endif
+
+        FilamentAsset::GLTFTexture texture;
+        texture.name = image.name == nullptr ? "" : image.name;
+        texture.buffer_len = buffer_view->size;
+        texture.buffer = (unsigned char*)srcAsset->bin + buffer_view->offset;
+        fAsset->textures.push_back(texture);
+        
         addResourceUri(srcAsset->images[i].uri);
     }
+    printf("fAsset->textures.size():%lu\n", fAsset->textures.size());
+
     fAsset->mResourceUris.reserve(resourceUris.size());
     for (std::string_view uri : resourceUris) {
         fAsset->mResourceUris.push_back(uri.data());
@@ -662,12 +782,16 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
     const cgltf_mesh* mesh = node->mesh;
     const cgltf_size primitiveCount = mesh->primitives_count;
 
+    // printf("createRenderable() name:'%s' primitiveCount:%d\n", name, (int)primitiveCount);
+
     // If the mesh is already loaded, obtain the list of Filament VertexBuffer / IndexBuffer objects
     // that were already generated (one for each primitive).
     FixedCapacityVector<Primitive>& prims = fAsset->mMeshCache[mesh - srcAsset->meshes];
     assert_invariant(prims.size() == primitiveCount);
     Primitive* outputPrim = prims.data();
     const cgltf_primitive* inputPrim = &mesh->primitives[0];
+
+    // printf("createRenderable() inputPrim->material:%llu\n", inputPrim->material);
 
     Aabb aabb;
 
@@ -697,9 +821,10 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
         bool hasVertexColor = primitiveHasVertexColor(*inputPrim);
         MaterialInstance* mi = createMaterialInstance(inputPrim->material, &uvmap, hasVertexColor,
                 fAsset);
-        assert_invariant(mi);
+        // assert_invariant(mi);
         if (!mi) {
-            mError = true;
+            // dont crash on null material
+            // mError = true;
             continue;
         }
 
@@ -1279,6 +1404,9 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_data* srcAsset,
         case cgltf_alpha_mode_max_enum:
             break;
     }
+        
+    //TEMPLUUK
+    // matkey.alphaMode = AlphaMode::BLEND;
 
     return matkey;
 }
@@ -1300,18 +1428,49 @@ Material* FAssetLoader::getMaterial(const cgltf_data* srcAsset,
 
 MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inputMat, UvMap* uvmap,
     bool vertexColor, FFilamentAsset* fAsset) {
-    const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
+    const cgltf_data *srcAsset = fAsset->mSourceAsset->hierarchy;
+    if (inputMat == nullptr) {
+        printf("createMaterialInstance() inputMat == nullptr! vertexColor:%d\n", (int)vertexColor);
+        return nullptr;
+    }
+    // printf("createMaterialInstance() %s vertexColor:%d\n", inputMat->name, (int)vertexColor);
+    
     MaterialInstanceCache::Entry* const cacheEntry =
-            mMaterialInstanceCache.getEntry(&inputMat, vertexColor);
+            mMaterialInstanceCache.getEntry(&inputMat, vertexColor, false);
     if (cacheEntry->instance) {
         *uvmap = cacheEntry->uvmap;
         return cacheEntry->instance;
     }
 
+    std::string name = inputMat->name?inputMat->name:"UNNAMED_MATERIAL";
+    std::string name2 = name + "_blend";
+
+    // printf("createMaterialInstance() %s %s\n", name.c_str(), name2.c_str());
+
+    auto m2 = createMaterialInstance2( srcAsset, inputMat, uvmap, vertexColor, fAsset, name2, true);
+    auto m1 = createMaterialInstance2( srcAsset, inputMat, uvmap, vertexColor, fAsset, name, false);
+    (void)m2;
+    
+    return m1;
+}
+
+MaterialInstance *FAssetLoader::createMaterialInstance2(
+    const cgltf_data *srcAsset, const cgltf_material *inputMat, UvMap *uvmap,
+    bool vertexColor, FFilamentAsset* fAsset, std::string name, bool blend) {
+
+//   printf("createMaterialInstance2() %s vertexColor:%d blend:%d\n", name.c_str(), (int)vertexColor, (int)blend);
+
+  MaterialInstanceCache::Entry* const cacheEntry =
+            mMaterialInstanceCache.getEntry(&inputMat, vertexColor, blend);
+
     cgltf_texture_view baseColorTexture;
     cgltf_texture_view metallicRoughnessTexture;
     MaterialKey matkey = getMaterialKey(srcAsset, inputMat, uvmap, vertexColor, &baseColorTexture,
             &metallicRoughnessTexture);
+
+    if (blend) { 
+        matkey.alphaMode = AlphaMode::BLEND;
+    }
 
     // Check if this material has an extras string.
     CString extras;
@@ -1322,7 +1481,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
 
     // This not only creates a material instance, it modifies the material key according to our
     // rendering constraints. For example, Filament only supports 2 sets of texture coordinates.
-    MaterialInstance* mi = mMaterials.createMaterialInstance(&matkey, uvmap, inputMat->name,
+    MaterialInstance* mi = mMaterials.createMaterialInstance(&matkey, uvmap, name.c_str(),
             extras.c_str());
     if (!mi) {
         slog.e << "No material with the specified requirements exists." << io::endl;
@@ -1361,6 +1520,9 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         mi->setParameter("specularFactor", float3(sf[0], sf[1], sf[2]));
         mi->setParameter("glossinessFactor", sgConfig.glossiness_factor);
     }
+
+    mi->setParameter("alpha", 1.f);
+    mi->setParameter("baseColorBlend", float4{0.f,0.f,0.f,0.f});
 
     const TextureProvider::TextureFlags sRGB = TextureProvider::TextureFlags::sRGB;
     const TextureProvider::TextureFlags LINEAR = TextureProvider::TextureFlags::NONE;

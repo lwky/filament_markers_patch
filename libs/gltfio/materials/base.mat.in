@@ -5,6 +5,7 @@ material {
     blending : ${BLENDING},
     doubleSided : ${DOUBLESIDED},
     transparency : ${TRANSPARENCY},
+    transparentShadow : ${TRANSPARENTSHADOW}, // LUUK
     flipUV : false,
     specularAmbientOcclusion : simple,
     specularAntiAliasing : true,
@@ -20,6 +21,9 @@ material {
         { type : float4, name : baseColorFactor },
         { type : sampler2d, name : baseColorMap },
         { type : mat3, name : baseColorUvMatrix, precision: high },
+
+        { type : float, name : alpha },
+        { type : float4, name : baseColorBlend },
 
         // Metallic-Roughness Map
         { type : int, name : metallicRoughnessIndex },
@@ -66,19 +70,44 @@ material {
 
         ${CUSTOM_PARAMS}
     ],
+
+    // Custom vertex shader outputs
+    variables : [
+        uvOffset
+    ],
 }
 
 vertex {
   void materialVertex(inout MaterialVertexInputs material) {
-      ${CUSTOM_VERTEX}
+        ${CUSTOM_VERTEX}
+
+        float4x4 mat = getWorldFromModelMatrix();
+        highp float scale0 = sqrt(
+                mat[0].x * mat[0].x
+              + mat[0].y * mat[0].y
+              + mat[0].z * mat[0].z);
+
+        // wood scale is 1.0002 to (including) 1.0019
+        highp float offset1 = mod(round(max(0.0, scale0 - 1.0001) * 10000.0) * 1.0, 19.0) * 0.05555;
+        highp float offset2 = mod(round(max(0.0, scale0 - 1.0001) * 10000.0) * 7.0, 19.0) * 0.05555;
+        material.uvOffset.x = offset1;
+        material.uvOffset.y = offset2;
     }
 }
 
 fragment {
     void material(inout MaterialInputs material) {
         highp float2 uvs[2];
-        uvs[0] = getUV0();
-        uvs[1] = getUV1();
+        // uvs[0] = getUV0();
+        // uvs[1] = getUV1();
+        uvs[0] = getUV0() + float2(variable_uvOffset.x, variable_uvOffset.y);
+        uvs[1] = getUV1() + float2(variable_uvOffset.x, variable_uvOffset.y);
+
+        // use this for random wood colors
+        // if(variable_uvOffset.x > 0.0){
+            // uvs[0] = float2(variable_uvOffset.x, variable_uvOffset.y);
+            // uvs[1] = float2(variable_uvOffset.x, variable_uvOffset.y);
+        // }
 
         #if !defined(SHADING_MODEL_UNLIT)
             if (materialParams.normalIndex > -1) {
@@ -107,8 +136,12 @@ fragment {
         }
 
         #if defined(BLEND_MODE_TRANSPARENT)
+            material.baseColor.a *= materialParams.alpha;
             material.baseColor.rgb *= material.baseColor.a;
         #endif
+
+        material.baseColor.rgb = material.baseColor.rgb * (1.0 - materialParams.baseColorBlend.a)
+                                 + materialParams.baseColorBlend.rgb * material.baseColor.a * materialParams.baseColorBlend.a;
 
         material.baseColor *= getColor();
 

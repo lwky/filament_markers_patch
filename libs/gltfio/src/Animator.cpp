@@ -267,13 +267,19 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
     time = fmod(time, anim.duration);
     TransformManager& transformManager = *mImpl->transformManager;
     transformManager.openLocalTransformTransaction();
+    int c = 0;
     for (const auto& channel : anim.channels) {
         const Sampler* sampler = channel.sourceData;
         if (sampler->times.size() < 2) {
             continue;
         }
 
-        const TimeValues& times = sampler->times;
+        const TimeValues &times = sampler->times;
+
+        // printf("back:%f \n",sampler->times.back());
+        // for (auto pair : sampler->times) {
+        //     printf("%f %d \n", pair.first, pair.second);
+        // }
 
         // Find the first keyframe after the given time, or the keyframe that matches it exactly.
         TimeValues::const_iterator iter = times.lower_bound(time);
@@ -301,11 +307,20 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
             }
         }
 
+        TimeValues::const_iterator iter2 = times.lower_bound(anim.duration);
+        if (c < 10) {   
+            // printf("c:%d iter:%d  \n", c,(int)std::distance(times.begin(), iter));
+            // printf("values.size():%d \n", (int)sampler->values.size());
+            // printf("%f %d \n", iter2->first, (int)iter2->second);
+            // printf("%d %d \n", (int)prevIndex, (int)nextIndex);
+        }
+
         if (sampler->interpolation == Sampler::STEP) {
             t = 0.0f;
         }
 
         mImpl->applyAnimation(channel, t, prevIndex, nextIndex);
+        ++c;
     }
     transformManager.commitLocalTransformTransaction();
 }

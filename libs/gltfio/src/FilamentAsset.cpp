@@ -406,6 +406,13 @@ const char* FilamentAsset::getSceneName(size_t sceneIndex) const noexcept {
     return downcast(this)->getSceneName(sceneIndex);
 }
 
+const std::vector<FilamentAsset::AnimationMarker>& FilamentAsset::getAnimationMarkers() const noexcept {
+    return downcast(this)->getAnimationMarkers();
+}
+const std::vector<FilamentAsset::GLTFTexture>& FilamentAsset::getTextures() const noexcept {
+    return downcast(this)->getTextures();
+}
+
 void FilamentAsset::addEntitiesToScene(Scene& targetScene, const Entity* entities, size_t count,
         SceneMask sceneFilter) const {
     downcast(this)->addEntitiesToScene(targetScene, entities, count, sceneFilter);

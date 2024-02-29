@@ -2740,6 +2740,8 @@ static int cgltf_parse_json_unprocessed_extensions(cgltf_options* options, jsmnt
 	*out_extensions_count = 0;
 	*out_extensions = (cgltf_extension*)cgltf_calloc(options, sizeof(cgltf_extension), extensions_size);
 
+    printf("cgltf_parse_json_unprocessed_extensions() %d\n", extensions_size);
+
 	if (!*out_extensions)
 	{
 		return CGLTF_ERROR_NOMEM;
@@ -3026,7 +3028,7 @@ static int cgltf_parse_json_primitive(cgltf_options* options, jsmntok_t const* t
 			{
 				return CGLTF_ERROR_NOMEM;
 			}
-
+			// printf("extensions_size: %d\n", extensions_size);
 			++i;
 			for (int k = 0; k < extensions_size; ++k)
 			{
