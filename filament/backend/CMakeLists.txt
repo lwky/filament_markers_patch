@@ -322,6 +322,10 @@ if (FILAMENT_SUPPORTS_METAL)
     target_link_libraries(${TARGET} PUBLIC "-framework Metal -framework CoreVideo")
 endif()
 
+if (FILAMENT_SUPPORTS_OPENGL)
+    target_link_libraries(${TARGET} PUBLIC "-framework CoreVideo")
+endif()
+
 if (LINUX)
     target_link_libraries(${TARGET} PRIVATE dl)
     if(FILAMENT_SUPPORTS_EGL_ON_LINUX)
