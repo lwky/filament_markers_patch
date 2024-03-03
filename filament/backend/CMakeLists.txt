@@ -322,7 +322,7 @@ if (FILAMENT_SUPPORTS_METAL)
     target_link_libraries(${TARGET} PUBLIC "-framework Metal -framework CoreVideo")
 endif()
 
-if (FILAMENT_SUPPORTS_OPENGL)
+if (FILAMENT_SUPPORTS_OPENGL AND NOT WEBGL)
     target_link_libraries(${TARGET} PUBLIC "-framework CoreVideo")
 endif()
 
